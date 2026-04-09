@@ -1,0 +1,7 @@
+# OS Metadata
+.DS_Store
+Thumbs.db
+
+# Project Specific
+hud-previewer.html
+*.log

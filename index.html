@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VisualMenu Studio | Universal UI Exporter</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="theme-minecraft">
+    <header>
+        <div class="logo">
+            <i class="fas fa-microchip"></i>
+            <span>VisualMenu <b>Studio</b></span>
+        </div>
+        
+        <div class="header-controls">
+            <div class="control-group">
+                <label>Platform</label>
+                <select id="platformSelect">
+                    <option value="minecraft">Minecraft</option>
+                    <option value="python">Python</option>
+                    <option value="c_cpp">C / C++</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label id="loaderLabel">Loader</label>
+                <select id="loaderSelect">
+                    <!-- Populated dynamically -->
+                </select>
+            </div>
+        </div>
+
+        <div class="header-actions">
+            <button class="btn-primary" id="exportBtn">
+                <i class="fas fa-download"></i> Export Project
+            </button>
+        </div>
+    </header>
+
+    <main class="workbench">
+        <!-- Sidebar: Assets and Widgets -->
+        <aside class="sidebar" id="sidebar">
+            <div class="panel-header-toggle">
+                <span class="section-title" style="margin:0">Editor</span>
+                <button class="toggle-btn" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+            </div>
+            <div class="panel-section">
+                <div class="field-row">
+                    <label>Zoom (<span id="zoomVal">100</span>%)</label>
+                    <input type="range" id="zoomSlider" min="20" max="200" value="100">
+                </div>
+                <div class="field-row">
+                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                        <input type="checkbox" id="gridToggle"> Show Grid
+                    </label>
+                </div>
+                <div class="field-row">
+                    <label>Native Resolution</label>
+                    <select id="resSelector"></select>
+                </div>
+                <div class="field-row">
+                    <label>Mock Background</label>
+                    <select id="sceneBg">
+                        <option value="none">Solid Color</option>
+                        <option value="mc_overworld">Minecraft: Overworld</option>
+                        <option value="mc_nether">Minecraft: Nether</option>
+                        <option value="game_forest">Concept: Forest</option>
+                        <option value="game_city">Concept: Urban</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h2 class="section-title">Components Library</h2>
+                <div class="widget-grid" id="widgetGrid">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <div class="panel-section" style="flex: 1; overflow-y: auto;">
+                <h2 class="section-title">Layers Panel</h2>
+                <ul id="layersList" class="layer-list"></ul>
+            </div>
+        </aside>
+
+        <div class="resizer-v" id="resizerL"></div>
+
+        <!-- Main Designer Workspace -->
+        <section class="designer">
+            <div class="canvas-scroller">
+                <div class="canvas-container" id="canvasContainer">
+                    <div id="canvas"></div>
+                </div>
+            </div>
+
+            <div class="resizer-h" id="resizerB"></div>
+
+            <!-- Bottom Code Panel -->
+            <div class="code-panel" id="codePanel">
+                <div class="code-header">
+                    <div class="code-tabs">
+                        <button class="code-tab active" data-target="source">Source Code</button>
+                        <button class="code-tab" data-target="json">JSON</button>
+                        <button class="code-tab" data-target="css">CSS</button>
+                    </div>
+                    <span id="copyCode"><i class="far fa-copy"></i> Copy</span>
+                </div>
+                <div class="export-meta" id="exportMeta">Targeting: NeoForge 1.21.1</div>
+                <pre id="codeOutput"><code>// Initializing engine...</code></pre>
+            </div>
+        </section>
+
+        <div class="resizer-v" id="resizerR"></div>
+
+        <!-- Properties Inspector -->
+        <aside class="inspector" id="inspector">
+            <div class="panel-section">
+                <div class="panel-header-toggle">
+                    <h2 class="section-title" style="margin:0">Property Editor</h2>
+                    <button class="toggle-btn" onclick="toggleInspector()"><i class="fas fa-cog"></i></button>
+                </div>
+                <div id="noSelection" class="empty-state">
+                    Select an element to edit properties
+                </div>
+                <div id="propertiesForm" style="display: none;">
+                    <div class="property-group">
+                        <div class="property-row"><label>ID</label><input type="text" id="propId"></div>
+                        <div class="property-row"><label>Text</label><input type="text" id="propText"></div>
+                        <div class="property-row">
+                            <label>Font</label>
+                            <select id="propFont">
+                                <option value="Minecraft">MC Legacy</option>
+                                <option value="Outfit">Modern Clean</option>
+                                <option value="JetBrains Mono">Code Mono</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="property-group">
+                        <div class="property-row"><label>X</label><input type="number" id="propX"></div>
+                        <div class="property-row"><label>Y</label><input type="number" id="propY"></div>
+                        <div class="property-row"><label>Width</label><input type="number" id="propWidth"></div>
+                        <div class="property-row"><label>Height</label><input type="number" id="propHeight"></div>
+                    </div>
+                    <div class="property-group">
+                        <div class="property-row"><label title="Rotation (Degrees)">Rotate</label><input type="range" id="propRotation" min="0" max="360" value="0"></div>
+                        <div class="property-row"><label title="Opacity (0-1)">Opacity</label><input type="range" id="propOpacity" min="0" max="100" value="100"></div>
+                        <div class="property-row"><label title="Scale (0.1-3)">Scale</label><input type="range" id="propScale" min="10" max="300" value="100"></div>
+                    </div>
+                    <div class="property-group">
+                        <div class="property-row"><label>Color</label><input type="color" id="propColor" value="#00ff88"></div>
+                        <div class="property-row"><label>Accent</label><input type="color" id="propAccent" value="#ff4757"></div>
+                        <div class="property-row"><label>Value (%)</label><input type="range" id="propProgress" min="0" max="100" value="70"></div>
+                    </div>
+                    <div class="property-group">
+                        <div class="property-row">
+                            <label title="Path for Minecraft (modid:textures/...) or URL for Web">Texture Src</label>
+                            <input type="text" id="propTexture" placeholder="modid:textures/gui/...">
+                        </div>
+                    </div>
+                    <div class="property-group uv-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:5px;">
+                        <div class="property-row"><label>U</label><input type="number" id="propU" value="0"></div>
+                        <div class="property-row"><label>V</label><input type="number" id="propV" value="0"></div>
+                        <div class="property-row"><label>UW</label><input type="number" id="propUw" value="256"></div>
+                        <div class="property-row"><label>UH</label><input type="number" id="propUh" value="256"></div>
+                    </div>
+                    <div id="dynamicProps" class="property-group"></div>
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <div class="statusbar">
+        <span>RES: <b id="sbRes">0x0</b></span>
+        <span>POS: <b id="sbPos">0, 0</b></span>
+        <span>LAYERS: <b id="sbLayers">0</b></span>
+        <span style="margin-left:auto">PLATFORM: <b id="sbPlatform">?</b></span>
+    </div>
+
+    <div id="toast" class="toast">Action completed!</div>
+
+    <div style="display:none">
+        <input type="file" id="importJson" accept=".json">
+    </div>
+
+    <script src="presets.js"></script>
+    <script src="app.js"></script>
+    <script src="exporter.js"></script>
+</body>
+</html>
