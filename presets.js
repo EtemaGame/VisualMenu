@@ -1,4 +1,4 @@
-// VisualMenu Studio - Platform & Loader Presets v2.1 (Texture Support)
+// VisualMenu Studio - Platform & Loader Presets v3 (Vision 2026)
 
 window.PLATFORMS = {
     minecraft: {
@@ -10,6 +10,22 @@ window.PLATFORMS = {
             { id: "fabric", name: "Fabric (1.20.1+)" }
         ],
         widgets: ["button", "label", "slot", "xp_bar", "image"]
+    },
+    godot: {
+        name: "Godot Engine",
+        theme: "theme-modern",
+        loaders: [
+            { id: "gdscript", name: "GDScript (Standard)", default: true }
+        ],
+        widgets: ["button", "label", "healthbar", "image"]
+    },
+    unity: {
+        name: "Unity Engine",
+        theme: "theme-scifi",
+        loaders: [
+            { id: "csharp", name: "C# (UI Toolkit)", default: true }
+        ],
+        widgets: ["button", "label", "image", "healthbar"]
     },
     python: {
         name: "Python Applications",
@@ -37,4 +53,4 @@ window.RESOLUTIONS = [
     { name: "Small Window (640x480)", w: 640, h: 480 }
 ];
 
-console.log("Presets Engine v2.1 (Texture Support) Loaded");
+console.log("Presets Engine v3 (Vision 2026) Loaded");

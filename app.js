@@ -1,80 +1,57 @@
-// VisualMenu Studio - Universal Application Logic v6 (Resizable Layout)
+// VisualMenu Studio - Vision 2026 Core v1 (Desktop Ready)
 const canvas = document.getElementById('canvas');
 const container = document.getElementById('canvasContainer');
-const platformSelect = document.getElementById('platformSelect');
-const loaderSelect = document.getElementById('loaderSelect');
-const resSelector = document.getElementById('resSelector');
-const widgetGrid = document.getElementById('widgetGrid');
-const sceneBg = document.getElementById('sceneBg');
-const codeOutput = document.getElementById('codeOutput');
-const exportMeta = document.getElementById('exportMeta');
+const screenListEl = document.getElementById('screenList');
+const screenTabsEl = document.getElementById('screenTabs');
 
-// Panels
-const sidebar = document.getElementById('sidebar');
-const inspector = document.getElementById('inspector');
-const codePanel = document.getElementById('codePanel');
+// Project State (The Store)
+let project = {
+    name: "My Project",
+    screens: [
+        { name: "MainHUD.java", widgets: [], history: [], historyIndex: -1, zoom: 1 }
+    ],
+    currentScreenIdx: 0
+};
 
-// Refined controls
-const zoomSlider = document.getElementById('zoomSlider');
-const zoomVal = document.getElementById('zoomVal');
-const gridToggle = document.getElementById('gridToggle');
-const sbPos = document.getElementById('sbPos');
-const sbLayers = document.getElementById('sbLayers');
-const sbRes = document.getElementById('sbRes');
-const sbPlatform = document.getElementById('sbPlatform');
-
-let widgets = [];
+// Global References
 let selectedId = null;
 let currentPlatform = "minecraft";
 let currentLoader = "neoforge";
 let currentFormat = "source";
 
-let zoom = 1;
-let history = [];
-let historyIndex = -1;
-
 function init() {
     setupEventListeners();
     populateStaticLists();
     initResizableLayout();
-    switchPlatform(platformSelect.value);
+    switchPlatform(document.getElementById('platformSelect').value);
+    rebuildScreenUI();
     saveState();
 }
 
 function setupEventListeners() {
-    platformSelect.addEventListener('change', (e) => switchPlatform(e.target.value));
-    loaderSelect.addEventListener('change', (e) => { currentLoader = e.target.value; updateExport(); });
-    resSelector.addEventListener('change', (e) => updateResolution(e.target.value));
-    sceneBg.addEventListener('change', (e) => canvas.className = e.target.value);
+    document.getElementById('platformSelect').addEventListener('change', (e) => switchPlatform(e.target.value));
+    document.getElementById('resSelector').addEventListener('change', (e) => updateResolution(e.target.value));
     
-    zoomSlider.addEventListener('input', (e) => {
-        zoom = e.target.value / 100;
-        zoomVal.textContent = e.target.value;
-        container.style.transform = `scale(${zoom})`;
+    document.getElementById('zoomSlider').addEventListener('input', (e) => {
+        const s = getActiveScreen();
+        s.zoom = e.target.value / 100;
+        document.getElementById('zoomVal').textContent = e.target.value;
+        container.style.transform = `scale(${s.zoom})`;
     });
-    gridToggle.addEventListener('change', (e) => document.body.classList.toggle('show-grid', e.target.checked));
 
     window.addEventListener('keydown', (e) => {
         if (e.ctrlKey && e.key === 'z') { e.preventDefault(); undo(); }
         if (e.ctrlKey && e.key === 'y') { e.preventDefault(); redo(); }
     });
 
-    canvas.addEventListener('mousemove', (e) => {
-        const rect = canvas.getBoundingClientRect();
-        const x = Math.round((e.clientX - rect.left) / zoom);
-        const y = Math.round((e.clientY - rect.top) / zoom);
-        sbPos.textContent = `${x}, ${y}`;
-    });
-
     canvas.addEventListener('dragover', e => e.preventDefault());
     canvas.addEventListener('drop', handleDrop);
 
-    // Property Sync
-    const inputs = document.querySelectorAll('#propertiesForm input, #propertiesForm select');
-    inputs.forEach(input => {
+    // Universal Property Sync
+    document.querySelectorAll('.property-group input, .property-group select').forEach(input => {
         input.addEventListener('input', (e) => {
             if (!selectedId) return;
-            const w = widgets.find(x => x.id === selectedId);
+            const w = getActiveScreen().widgets.find(x => x.id === selectedId);
             const prop = e.target.id.replace('prop', '');
             const val = e.target.type === 'number' || e.target.type === 'range' ? parseFloat(e.target.value) : e.target.value;
             const keyMap = { Id: 'id', Text: 'text', X: 'x', Y: 'y', Width: 'width', Height: 'height', Rotation: 'rotation', Opacity: 'opacity', Scale: 'scale', Color: 'color', Accent: 'accent', Progress: 'progress', Font: 'font', Texture: 'texture', U: 'u', V: 'v', Uw: 'uw', Uh: 'uh' };
@@ -82,105 +59,68 @@ function setupEventListeners() {
             if (key) w[key] = val;
             render();
         });
-        if (input.type === 'color' || input.type === 'range' || input.type === 'text' || input.type === 'number') {
-            input.addEventListener('change', saveState);
-        }
-    });
-
-    document.querySelectorAll('.code-tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-            document.querySelectorAll('.code-tab').forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-            currentFormat = tab.getAttribute('data-target');
-            updateExport();
-        });
+        if (['color', 'range', 'text', 'number'].includes(input.type)) input.addEventListener('change', saveState);
     });
 }
 
-function initResizableLayout() {
-    const resizerL = document.getElementById('resizerL');
-    const resizerR = document.getElementById('resizerR');
-    const resizerB = document.getElementById('resizerB');
+function getActiveScreen() { return project.screens[project.currentScreenIdx]; }
 
-    // Vertical Resize Left
-    resizerL.addEventListener('mousedown', (e) => {
-        const startX = e.clientX;
-        const startWidth = sidebar.offsetWidth;
-        const doDrag = (e) => {
-            const width = startWidth + (e.clientX - startX);
-            if (width > 45 && width < 500) sidebar.style.width = `${width}px`;
-        };
-        const stopDrag = () => { document.removeEventListener('mousemove', doDrag); document.removeEventListener('mouseup', stopDrag); };
-        document.addEventListener('mousemove', doDrag);
-        document.addEventListener('mouseup', stopDrag);
-    });
-
-    // Vertical Resize Right
-    resizerR.addEventListener('mousedown', (e) => {
-        const startX = e.clientX;
-        const startWidth = inspector.offsetWidth;
-        const doDrag = (e) => {
-            const width = startWidth - (e.clientX - startX);
-            if (width > 45 && width < 500) inspector.style.width = `${width}px`;
-        };
-        const stopDrag = () => { document.removeEventListener('mousemove', doDrag); document.removeEventListener('mouseup', stopDrag); };
-        document.addEventListener('mousemove', doDrag);
-        document.addEventListener('mouseup', stopDrag);
-    });
-
-    // Horizontal Resize Bottom
-    resizerB.addEventListener('mousedown', (e) => {
-        const startY = e.clientY;
-        const startHeight = codePanel.offsetHeight;
-        const doDrag = (e) => {
-            const height = startHeight - (e.clientY - startY);
-            if (height > 100 && height < 600) codePanel.style.height = `${height}px`;
-        };
-        const stopDrag = () => { document.removeEventListener('mousemove', doDrag); document.removeEventListener('mouseup', stopDrag); };
-        document.addEventListener('mousemove', doDrag);
-        document.addEventListener('mouseup', stopDrag);
-    });
+function addScreen() {
+    const name = prompt("Enter screen name (e.g. Inventory.java):", "NewScreen.java");
+    if (!name) return;
+    project.screens.push({ name, widgets: [], history: [], historyIndex: -1, zoom: 1 });
+    project.currentScreenIdx = project.screens.length - 1;
+    rebuildScreenUI();
+    render();
+    saveState();
 }
 
-window.toggleSidebar = () => sidebar.classList.toggle('collapsed');
-window.toggleInspector = () => inspector.classList.toggle('collapsed');
-
-function switchPlatform(platformId) {
-    currentPlatform = platformId;
-    const config = window.PLATFORMS[platformId];
-    document.body.className = config.theme;
-    loaderSelect.innerHTML = config.loaders.map(l => `<option value="${l.id}" ${l.default ? 'selected' : ''}>${l.name}</option>`).join('');
-    currentLoader = loaderSelect.value;
-    widgetGrid.innerHTML = config.widgets.map(w => `<div class="widget-item" draggable="true" data-type="${w}"><i class="fas ${getIcon(w)}"></i><span>${w.replace('_', ' ')}</span></div>`).join('');
-    document.querySelectorAll('.widget-item').forEach(item => {
-        item.addEventListener('dragstart', (e) => e.dataTransfer.setData('type', e.target.getAttribute('data-type')));
-    });
-    sbPlatform.textContent = config.name;
-    updateExport();
+function switchScreen(idx) {
+    project.currentScreenIdx = idx;
+    const s = getActiveScreen();
+    document.getElementById('zoomSlider').value = s.zoom * 100;
+    document.getElementById('zoomVal').textContent = s.zoom * 100;
+    container.style.transform = `scale(${s.zoom})`;
+    rebuildScreenUI();
+    render();
 }
 
-function updateResolution(val) {
-    const [w, h] = val.split(',').map(Number);
-    canvas.style.width = `${w}px`;
-    canvas.style.height = `${h}px`;
-    sbRes.textContent = `${w}x${h}`;
+function rebuildScreenUI() {
+    screenListEl.innerHTML = project.screens.map((s, idx) => `
+        <li class="file-item ${idx === project.currentScreenIdx ? 'active' : ''}" onclick="switchScreen(${idx})">
+            <i class="fas fa-file-code"></i><span>${s.name}</span>
+        </li>
+    `).join('');
+    
+    screenTabsEl.innerHTML = project.screens.map((s, idx) => `
+        <div class="screen-tab ${idx === project.currentScreenIdx ? 'active' : ''}" onclick="switchScreen(${idx})">
+            ${s.name} <i class="fas fa-times" onclick="removeScreen(event, ${idx})"></i>
+        </div>
+    `).join('');
+}
+
+function removeScreen(e, idx) {
+    e.stopPropagation();
+    if (project.screens.length <= 1) return;
+    project.screens.splice(idx, 1);
+    if (project.currentScreenIdx >= project.screens.length) project.currentScreenIdx = project.screens.length - 1;
+    rebuildScreenUI();
+    render();
 }
 
 function handleDrop(e) {
     e.preventDefault();
     const type = e.dataTransfer.getData('type');
     const rect = canvas.getBoundingClientRect();
-    const x = Math.round((e.clientX - rect.left) / zoom);
-    const y = Math.round((e.clientY - rect.top) / zoom);
-    const finalX = gridToggle.checked ? Math.round(x / 20) * 20 : x;
-    const finalY = gridToggle.checked ? Math.round(y / 20) * 20 : y;
-    const id = `${type}_${widgets.length + 1}`;
-    const widget = {
-        id, type, x: finalX, y: finalY, width: type==='image'?64:(type==='slot'?36:120), height: type==='image'?64:(type==='slot'?36:30), 
-        text: type === 'button' ? 'Action' : (type==='label'?'New Label':''), texture: '', u: 0, v: 0, uw: 256, uh: 256,
-        color: type==='healthbar'?'#ff4757':'#00ff88', progress: 75, opacity: 100, rotation: 0, scale: 100, font: 'Minecraft'
-    };
-    widgets.push(widget);
+    const s = getActiveScreen();
+    const x = Math.round((e.clientX - rect.left) / s.zoom);
+    const y = Math.round((e.clientY - rect.top) / s.zoom);
+    
+    const id = `${type}_${s.widgets.length + 1}`;
+    s.widgets.push({
+        id, type, x, y, width: 120, height: 30, text: type==='label'?'New Label':'',
+        texture: '', u:0, v:0, uw:256, uh:256, color:'#00ff88', progress:75, opacity:100, rotation:0, scale:100, font:'Minecraft'
+    });
     selectWidget(id);
     render();
     saveState();
@@ -188,100 +128,121 @@ function handleDrop(e) {
 
 function render() {
     canvas.innerHTML = '';
-    widgets.forEach(w => {
+    const s = getActiveScreen();
+    s.widgets.forEach(w => {
         const el = document.createElement('div');
         el.className = `mc-widget mc-${w.type} ${w.id === selectedId ? 'selected' : ''}`;
         el.id = w.id;
-        el.style.left = `${w.x}px`; el.style.top = `${w.y}px`;
-        el.style.width = `${w.width}px`; el.style.height = `${w.height}px`;
-        el.style.opacity = w.opacity / 100;
-        el.style.transform = `rotate(${w.rotation}deg) scale(${w.scale / 100})`;
-        el.style.fontFamily = `'${w.font}', sans-serif`; el.style.color = w.color;
-
+        Object.assign(el.style, {
+            left: `${w.x}px`, top: `${w.y}px`, width: `${w.width}px`, height: `${w.height}px`,
+            opacity: w.opacity/100, transform: `rotate(${w.rotation}deg) scale(${w.scale/100})`,
+            fontFamily: `'${w.font}', sans-serif`, color: w.color
+        });
         if (w.texture) {
             el.classList.add('custom-textured');
             if (w.texture.startsWith('http')) el.style.backgroundImage = `url('${w.texture}')`;
             el.style.backgroundPosition = `-${w.u}px -${w.v}px`;
         }
-
-        if (w.type === 'healthbar' || w.type === 'xp_bar') {
+        if (w.type.includes('bar')) {
             const inner = document.createElement('div');
             inner.className = 'bar-inner'; inner.style.width = `${w.progress}%`; inner.style.backgroundColor = w.color;
             el.appendChild(inner);
         } else if (w.text && w.type !== 'image') {
             const span = document.createElement('span'); span.textContent = w.text; el.appendChild(span);
         }
-
         el.addEventListener('mousedown', (e) => { e.stopPropagation(); selectWidget(w.id); startDragging(e, w); });
         canvas.appendChild(el);
     });
-    updateLayers(); updateExport(); sbLayers.textContent = widgets.length;
+    updateLayers(); updateExport();
 }
 
 function selectWidget(id) {
-    selectedId = id; const w = widgets.find(x => x.id === id);
-    const form = document.getElementById('propertiesForm'); const noSel = document.getElementById('noSelection');
+    selectedId = id; const w = getActiveScreen().widgets.find(x => x.id === id);
+    const form = document.getElementById('propertiesForm');
     if (w) {
-        form.style.display = 'block'; noSel.style.display = 'none';
-        document.getElementById('propId').value = w.id; document.getElementById('propText').value = w.text || '';
-        document.getElementById('propX').value = w.x; document.getElementById('propY').value = w.y;
-        document.getElementById('propWidth').value = w.width; document.getElementById('propHeight').value = w.height;
-        document.getElementById('propRotation').value = w.rotation; document.getElementById('propOpacity').value = w.opacity;
-        document.getElementById('propScale').value = w.scale; document.getElementById('propColor').value = w.color;
-        document.getElementById('propProgress').value = w.progress || 0; document.getElementById('propFont').value = w.font || 'Minecraft';
-        document.getElementById('propTexture').value = w.texture || '';
-        document.getElementById('propU').value = w.u || 0; document.getElementById('propV').value = w.v || 0;
-        document.getElementById('propUw').value = w.uw || 256; document.getElementById('propUh').value = w.uh || 256;
-    } else { form.style.display = 'none'; noSel.style.display = 'block'; }
+        form.style.display = 'block'; document.getElementById('noSelection').style.display = 'none';
+        ['Id','Text','X','Y','Width','Height','Rotation','Opacity','Scale','Color','Progress','Font','Texture','U','V','Uw','Uh'].forEach(p => {
+            const val = w[p.toLowerCase()];
+            if (val !== undefined) document.getElementById(`prop${p}`).value = val;
+        });
+    } else { form.style.display = 'none'; document.getElementById('noSelection').style.display = 'block'; }
     render();
 }
 
 function saveState() {
-    if (historyIndex < history.length - 1) history = history.slice(0, historyIndex + 1);
-    history.push(JSON.stringify(widgets));
-    if (history.length > 50) history.shift(); else historyIndex++;
+    const s = getActiveScreen();
+    if (s.historyIndex < s.history.length - 1) s.history = s.history.slice(0, s.historyIndex + 1);
+    s.history.push(JSON.stringify(s.widgets));
+    if (s.history.length > 50) s.history.shift(); else s.historyIndex++;
 }
 
-function undo() { if (historyIndex > 0) { historyIndex--; widgets = JSON.parse(history[historyIndex]); render(); showToast("Undo"); } }
-function redo() { if (historyIndex < history.length - 1) { historyIndex++; widgets = JSON.parse(history[historyIndex]); render(); showToast("Redo"); } }
-function showToast(msg) { const t = document.getElementById('toast'); if (t) { t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2000); } }
+function undo() {
+    const s = getActiveScreen();
+    if (s.historyIndex > 0) { s.historyIndex--; s.widgets = JSON.parse(s.history[s.historyIndex]); render(); }
+}
+
+function initResizableLayout() {
+    const resizers = { L: 'sidebar', R: 'inspector', B: 'codePanel' };
+    Object.entries(resizers).forEach(([dir, id]) => {
+        const el = document.getElementById(`resizer${dir}`);
+        const target = document.getElementById(id);
+        el.addEventListener('mousedown', (e) => {
+            const startVal = dir === 'B' ? target.offsetHeight : target.offsetWidth;
+            const startPos = dir === 'B' ? e.clientY : e.clientX;
+            const onMove = (me) => {
+                const delta = (me[dir==='B'?'clientY':'clientX'] - startPos) * (dir === 'L' ? 1 : -1);
+                target.style[dir==='B'?'height':'width'] = `${startVal + delta}px`;
+            };
+            const onUp = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+        });
+    });
+}
 
 function populateStaticLists() {
-    resSelector.innerHTML = window.RESOLUTIONS.map(r => `<option value="${r.w},${r.h}">${r.name}</option>`).join('');
-    updateResolution(resSelector.value);
+    document.getElementById('resSelector').innerHTML = window.RESOLUTIONS.map(r => `<option value="${r.w},${r.h}">${r.name}</option>`).join('');
+    updateResolution(document.getElementById('resSelector').value);
 }
 
-let isDragging = false, currentWidget = null, startX, startY, origX, origY;
-function startDragging(e, w) {
-    isDragging = true; currentWidget = w; startX = e.clientX; startY = e.clientY; origX = w.x; origY = w.y;
-    document.addEventListener('mousemove', drag);
-    document.addEventListener('mouseup', () => { if (isDragging) saveState(); isDragging = false; document.removeEventListener('mousemove', drag); });
+function updateResolution(val) {
+    const [w, h] = val.split(',').map(Number);
+    canvas.style.width = `${w}px`; canvas.style.height = `${h}px`;
+    document.getElementById('sbRes').textContent = `${w}x${h}`;
 }
-function drag(e) {
-    if (!isDragging) return;
-    let dx = (e.clientX - startX) / zoom, dy = (e.clientY - startY) / zoom;
-    let nx = origX + dx, ny = origY + dy;
-    if (gridToggle.checked) { nx = Math.round(nx / 10) * 10; ny = Math.round(ny / 10) * 10; }
-    currentWidget.x = Math.round(nx); currentWidget.y = Math.round(ny);
-    selectWidget(currentWidget.id);
+
+function switchPlatform(p) {
+    currentPlatform = p; const config = window.PLATFORMS[p];
+    document.body.className = config.theme;
+    document.getElementById('loaderSelect').innerHTML = config.loaders.map(l => `<option value="${l.id}">${l.name}</option>`).join('');
+    document.getElementById('widgetGrid').innerHTML = config.widgets.map(w => `<div class="widget-item" draggable="true" data-type="${w}"><i class="fas ${getIcon(w)}"></i><span>${w}</span></div>`).join('');
+    document.querySelectorAll('.widget-item').forEach(i => i.addEventListener('dragstart', e => e.dataTransfer.setData('type', e.target.dataset.type)));
+    document.getElementById('sbPlatform').textContent = config.name;
+    updateExport();
 }
 
 function updateLayers() {
-    const list = document.getElementById('layersList');
-    list.innerHTML = widgets.map(w => `<li class="layer-item ${w.id === selectedId ? 'active' : ''}" onclick="selectWidget('${w.id}')"><span>${w.id}</span><i class="fas fa-eye visibility"></i></li>`).join('');
+    document.getElementById('layersList').innerHTML = getActiveScreen().widgets.map(w => `<li class="layer-item ${w.id===selectedId?'active':''}" onclick="selectWidget('${w.id}')">${w.id}</li>`).join('');
 }
 
 function updateExport() {
     if (window.UniversalExporter) {
-        const result = window.UniversalExporter.generate(widgets, currentPlatform, currentLoader, currentFormat);
-        codeOutput.innerHTML = result.code;
-        exportMeta.textContent = `Target: ${result.meta}`;
+        const res = window.UniversalExporter.generate(getActiveScreen().widgets, currentPlatform, document.getElementById('loaderSelect').value, currentFormat);
+        document.getElementById('codeOutput').innerHTML = res.code;
+        document.getElementById('exportMeta').textContent = res.meta;
     }
 }
 
-function getIcon(type) {
-    const icons = { button: 'fa-square', label: 'fa-font', slot: 'fa-border-all', xp_bar: 'fa-minus', healthbar: 'fa-heart', minimap: 'fa-compass', ammo: 'fa-gun', score: 'fa-star', image: 'fa-image' };
-    return icons[type] || 'fa-cube';
+function getIcon(t) {
+    const i = { button:'fa-square', label:'fa-font', slot:'fa-border-all', xp_bar:'fa-minus', healthbar:'fa-heart', image:'fa-image' };
+    return i[t] || 'fa-cube';
 }
+
+let isDragging = false, currentW = null, sX, sY, oX, oY;
+function startDragging(e, w) { isDragging = true; currentW = w; sX = e.clientX; sY = e.clientY; oX = w.x; oY = w.y; document.addEventListener('mousemove', drag); document.addEventListener('mouseup', () => { if (isDragging) saveState(); isDragging = false; document.removeEventListener('mousemove', drag); }); }
+function drag(e) { if (!isDragging) return; const z = getActiveScreen().zoom; currentW.x = Math.round(oX + (e.clientX - sX)/z); currentW.y = Math.round(oY + (e.clientY - sY)/z); selectWidget(currentW.id); }
+
+window.toggleSidebar = () => document.getElementById('sidebar').classList.toggle('collapsed');
+window.toggleInspector = () => document.getElementById('inspector').classList.toggle('collapsed');
 
 init();

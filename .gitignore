@@ -5,3 +5,9 @@ Thumbs.db
 # Project Specific
 hud-previewer.html
 *.log
+
+# Build Artifacts
+node_modules/
+dist/
+node-v24.14.1-win-x64/
+package-lock.json

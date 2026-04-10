@@ -39,6 +39,17 @@
     </header>
 
     <main class="workbench">
+        <!-- Project Explorer (NEW Vision 2026) -->
+        <aside class="project-explorer" id="projectExplorer">
+            <div class="panel-header-toggle">
+                <span class="section-title">Files</span>
+                <button class="add-btn" onclick="addScreen()"><i class="fas fa-plus"></i></button>
+            </div>
+            <ul class="file-list" id="screenList">
+                <li class="file-item active">MainScreen.java</li>
+            </ul>
+        </aside>
+
         <!-- Sidebar: Assets and Widgets -->
         <aside class="sidebar" id="sidebar">
             <div class="panel-header-toggle">
@@ -89,6 +100,9 @@
         <!-- Main Designer Workspace -->
         <section class="designer">
             <div class="canvas-scroller">
+                <div class="screen-tabs" id="screenTabs">
+                    <!-- Dynamic tabs here -->
+                </div>
                 <div class="canvas-container" id="canvasContainer">
                     <div id="canvas"></div>
                 </div>

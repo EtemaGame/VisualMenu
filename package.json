@@ -1,0 +1,28 @@
+{
+  "name": "visualmenu-studio",
+  "version": "1.0.0",
+  "description": "Professional HUD & UI Designer Suite",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win portable"
+  },
+  "author": "EtemaGame",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^31.7.7",
+    "electron-builder": "^24.13.3",
+    "electron-packager": "^17.1.2"
+  },
+  "build": {
+    "appId": "com.etemagame.visualmenu",
+    "productName": "VisualMenu Studio",
+    "win": {
+      "target": "portable",
+      "icon": "visualmenu_app_icon_1775778092613.png"
+    },
+    "directories": {
+      "output": "dist"
+    }
+  }
+}
