@@ -18,7 +18,9 @@
             <div class="control-group">
                 <label>Platform</label>
                 <select id="platformSelect">
-                    <option value="minecraft">Minecraft</option>
+                    <option value="minecraft">Minecraft (Java)</option>
+                    <option value="godot">Godot Engine</option>
+                    <option value="unity">Unity Engine</option>
                     <option value="python">Python</option>
                     <option value="c_cpp">C / C++</option>
                 </select>
@@ -32,8 +34,17 @@
         </div>
 
         <div class="header-actions">
+            <button class="btn-secondary" onclick="openProjectNative()">
+                <i class="fas fa-folder-open"></i> Open
+            </button>
+            <button class="btn-secondary" onclick="saveProjectNative()">
+                <i class="fas fa-save"></i> Save
+            </button>
+            <button class="btn-secondary" id="syncSourceBtn" style="display:none; border-color: var(--accent); color: var(--accent);">
+                <i class="fas fa-sync-alt"></i> Sync to Source
+            </button>
             <button class="btn-primary" id="exportBtn">
-                <i class="fas fa-download"></i> Export Project
+                <i class="fas fa-file-export"></i> Export Code
             </button>
         </div>
     </header>
@@ -43,11 +54,18 @@
         <aside class="project-explorer" id="projectExplorer">
             <div class="panel-header-toggle">
                 <span class="section-title">Files</span>
-                <button class="add-btn" onclick="addScreen()"><i class="fas fa-plus"></i></button>
+                <div style="display:flex; gap:5px">
+                    <button class="add-btn" onclick="selectSourceFolderNative()" title="Open Source Folder"><i class="fas fa-folder-plus"></i></button>
+                    <button class="add-btn" onclick="addScreen()"><i class="fas fa-plus"></i></button>
+                </div>
             </div>
             <ul class="file-list" id="screenList">
                 <li class="file-item active">MainScreen.java</li>
             </ul>
+            <div class="project-tree-container" id="projectTree" style="display:none">
+                <div class="tree-header">SOURCE CODES</div>
+                <div id="treeContent"></div>
+            </div>
         </aside>
 
         <!-- Sidebar: Assets and Widgets -->
@@ -99,10 +117,10 @@
 
         <!-- Main Designer Workspace -->
         <section class="designer">
+            <div class="screen-tabs" id="screenTabs">
+                <!-- Dynamic tabs here -->
+            </div>
             <div class="canvas-scroller">
-                <div class="screen-tabs" id="screenTabs">
-                    <!-- Dynamic tabs here -->
-                </div>
                 <div class="canvas-container" id="canvasContainer">
                     <div id="canvas"></div>
                 </div>
@@ -197,7 +215,9 @@
         <input type="file" id="importJson" accept=".json">
     </div>
 
+    <script src="minecraft-widgets.js"></script>
     <script src="presets.js"></script>
+    <script src="import-engine.js"></script>
     <script src="app.js"></script>
     <script src="exporter.js"></script>
 </body>

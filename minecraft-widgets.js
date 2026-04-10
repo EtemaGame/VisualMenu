@@ -1,6 +1,6 @@
 // VisualMenu Studio - Specific Minecraft Widget Definitions
 
-const MC_WIDGETS = {
+window.MC_WIDGETS = {
     button: {
         defaultWidth: 200,
         defaultHeight: 20,

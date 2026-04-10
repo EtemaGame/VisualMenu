@@ -5,7 +5,8 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "dist": "electron-builder --win portable"
+    "dist": "electron-builder --win",
+    "package": "electron-packager . \"VisualMenu Studio\" --platform=win32 --arch=x64 --out=dist --overwrite --icon=dist\\.icon-ico\\icon.ico --ignore=node-v24.14.1-win-x64 --ignore=dist --ignore=.git"
   },
   "author": "EtemaGame",
   "license": "ISC",
@@ -17,9 +18,19 @@
   "build": {
     "appId": "com.etemagame.visualmenu",
     "productName": "VisualMenu Studio",
+    "files": [
+      "**/*",
+      "!node-v24.14.1-win-x64/**",
+      "!dist/**",
+      "!.git/**",
+      "!*.md"
+    ],
     "win": {
-      "target": "portable",
-      "icon": "visualmenu_app_icon_1775778092613.png"
+      "target": [
+        "portable",
+        "zip"
+      ],
+      "icon": "dist/.icon-ico/icon.ico"
     },
     "directories": {
       "output": "dist"
